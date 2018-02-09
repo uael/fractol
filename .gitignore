@@ -1,0 +1,9 @@
+.idea/
+cmake-build-debug/
+out/
+obj/
+fractol
+*.dev
+*.san
+*.a
+*oops*
