@@ -6,13 +6,13 @@
 #    By: alucas- <alucas-@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2017/11/07 09:52:36 by alucas-           #+#    #+#              #
-#    Updated: 2017/12/08 09:48:05 by alucas-          ###   ########.fr        #
+#    Updated: 2018/02/09 16:49:06 by alucas-          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME ?= fractol
 CFLAGS += -Werror -Wextra -Wall
-RCFLAGS = -O3 -fomit-frame-pointer
+RCFLAGS = -O2 -fomit-frame-pointer
 DCFLAGS = -g3 -DDEBUG
 SCFLAGS = -fsanitize=address,undefined -ferror-limit=5
 CC ?= gcc
@@ -20,10 +20,11 @@ MAKE += -j4
 
 INC_PATH = include
 SRC_PATH = src
-OBJ_PATH ?= obj
+OBJ_DIR ?= obj
+OBJ_PATH ?= obj/rel
 3TH_PATH = vendor
 
-LIBS = ft lx
+LIBS = ft
 ifneq (,$(findstring dev,$(NAME)))
 LIB_NAME = $(addsuffix .dev, $(LIBS))
 else ifneq (,$(findstring san,$(NAME)))
@@ -31,10 +32,10 @@ LIB_NAME = $(addsuffix .san, $(LIBS))
 else
 LIB_NAME = $(LIBS)
 endif
-LIB_NAME += mlx pthread
-3TH_NAME = libft liblx
+LIB_NAME += mlx
+3TH_NAME = libft
 SRC_NAME = \
-	fractol.c
+	event.c fractol.c fractal.c
 
 3TH = $(addprefix $(3TH_PATH)/, $(3TH_NAME))
 OBJ = $(addprefix $(OBJ_PATH)/, $(SRC_NAME:.c=.o))
@@ -47,21 +48,21 @@ all:
 ifneq ($(3TH_NAME),)
 	@+$(foreach 3th,$(3TH_NAME),$(MAKE) -C $(3TH_PATH)/$(3th);)
 endif
-	@+$(MAKE) $(NAME) "CFLAGS = $(RCFLAGS)" "OBJ_PATH = $(OBJ_PATH)/rel"
+	@+$(MAKE) $(NAME) "CFLAGS = $(RCFLAGS)" "OBJ_PATH = $(OBJ_DIR)/rel"
 
 dev:
 ifneq ($(3TH_NAME),)
 	@+$(foreach 3th,$(3TH_NAME),$(MAKE) -C $(3TH_PATH)/$(3th) dev;)
 endif
 	@+$(MAKE) $(NAME).dev "NAME = $(NAME).dev" "CFLAGS = $(DCFLAGS)" \
-	  "OBJ_PATH = $(OBJ_PATH)/dev"
+	  "OBJ_PATH = $(OBJ_DIR)/dev"
 
 san:
 ifneq ($(3TH_NAME),)
 	@+$(foreach 3th,$(3TH_NAME),$(MAKE) -C $(3TH_PATH)/$(3th) san;)
 endif
 	@+$(MAKE) $(NAME).san "NAME = $(NAME).san" "CFLAGS = $(SCFLAGS)" \
-	  "OBJ_PATH = $(OBJ_PATH)/san"
+	  "OBJ_PATH = $(OBJ_DIR)/san"
 
 $(NAME): $(OBJ)
 	@$(CC) $(CFLAGS) $(INC) $(LNK) $(OBJ) $(LIB) -o $(NAME) -framework AppKit -framework OpenGL

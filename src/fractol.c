@@ -3,122 +3,98 @@
 /*                                                        :::      ::::::::   */
 /*   fractol.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: alucas- <alucas-@student.42.fr>            +#+  +:+       +#+        */
+/*   By: alucas- <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2017/11/07 09:52:30 by alucas-           #+#    #+#             */
-/*   Updated: 2017/12/13 08:23:58 by alucas-          ###   ########.fr       */
+/*   Created: 2017/12/09 14:36:50 by alucas-           #+#    #+#             */
+/*   Updated: 2017/12/09 15:55:23 by alucas-          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <pthread.h>
 #include "fractol.h"
 
-#define WIN_W 800
-#define WIN_H 800
-
-typedef struct	s_th
+static void	*fractal(uint32_t kind)
 {
-	int 		from;
-	int 		to;
-	t_img 		*img;
-	t_fractal	f;
-}				t_th;
-
-void 		julia(t_th *th)
-{
-	int x;
-	int y;
-	int i;
-
-	th->f.cr = -0.7;
-	th->f.ci = 0.27015;
-	y = th->from - 1;
-	while (++y < th->to && (x = -1))
-		while (++x < WIN_W)
-		{
-			th->f.ze = 1.5 * (x - WIN_W / 2) / (0.5 * th->f.zoom * WIN_W) +
-				th->f.mx;
-			th->f.zm = (y - WIN_H / 2) / (0.5 * th->f.zoom * WIN_H) + th->f.my;
-			i = -1;
-			while (++i < th->f.mi)
-			{
-				th->f.re = th->f.ze;
-				th->f.im = th->f.zm;
-				th->f.ze = th->f.re * th->f.re - th->f.im * th->f.im + th->f.cr;
-				th->f.zm = 2 * th->f.re * th->f.im + th->f.ci;
-				if ((th->f.ze * th->f.ze + th->f.zm * th->f.zm) > 4)
-					break;
-			}
-			th->img->data[y * th->img->height + x] = 919191919 * i;
-		}
-	pthread_exit(NULL);
+	if (kind == JULIA)
+		return (julia);
+	else if (kind == MANDELBROT)
+		return (mandelbrot);
+	else if (kind == BURNINGSHIP)
+		return (burningship);
+	else if (kind == TRICORN)
+		return (tricorn);
+	else if (kind == FISH)
+		return (fish);
+	return (NULL);
 }
 
-int			onkeypress(int key, t_win *win)
+int			draw(t_fl *fl)
 {
-	t_fractal	*f;
-	pthread_t	t[16];
-	t_th		th[16];
+	t_conf		o[THREADS];
+	pthread_t	t[THREADS];
+	int			i;
 
-	ft_memset(th, 0, sizeof(t_th) * 16);
-	f = win->data;
-	if (key == LX_KEYPLUS)
-		f->zoom += f->zoom * 0.1;
-	else if (key == LX_KEYMINUS)
-		f->zoom += f->zoom * -0.1;
-	else if (key == LX_KEYLEFT)
-		f->mx -= 0.03 / f->zoom;
-	else if (key == LX_KEYRIGHT)
-		f->mx += 0.03 / f->zoom;
-	else if (key == LX_KEYUP)
-		f->my -= 0.03 / f->zoom;
-	else if (key == LX_KEYDOWN)
-		f->my += 0.03 / f->zoom;
-	for (int i = 0; i < 16; ++i)
+	i = -1;
+	ft_memset(t, 0, sizeof(pthread_t) * THREADS);
+	while (++i < THREADS)
 	{
-		th[i].img = win->imgs;
-		th[i].from = (WIN_H / 16) * i;
-		th[i].to = (WIN_H / 16) * (i + 1) + 1;
-		th[i].f = *f;
-		pthread_create(t + i, NULL, (void *(*)(void *))julia, &th[i]);
+		o[i] = fl->c;
+		o[i].begin = ((IMG_Y / THREADS) * i) - 1;
+		o[i].end = (IMG_Y / THREADS) * (i + 1) + 1;
+		pthread_create(t + i, NULL, fractal(fl->kind), o + i);
 	}
-	for (int j = 15; j >= 0; --j)
-		pthread_join(t[j], NULL);
-	lx_winrefresh(win);
-	return (YEP);
+	while (i--)
+		pthread_join(t[i], NULL);
+	return (mlxsync(fl->mlx, fl->win, fl->img));
 }
 
-int 		fractol(t_win *win)
+void		putpixel(t_fl *fl, int x, int y, int color)
 {
-	static int			init = 0;
-	static t_fractal	f;
-	t_th				th;
-
-	if (!init)
-	{
-		init = 1;
-		win->data = &f;
-		lx_hookexpose(win, (t_event *)fractol);
-		lx_hookbtn(win, LX_KEYPRESS, 0, (t_event *)onkeypress);
-		return (lx_run());
-	}
-	ft_memset(&f, 0, sizeof(t_fractal));
-	th.img = win->imgs;
-	th.from = 0;
-	th.to = WIN_H;
-	th.f = f;
-	julia(&th);
-	lx_winrefresh(win);
-	return (YEP);
+	if (y >= IMG_Y || x >= IMG_X || x < 0 || y < 0)
+		return ;
+	*(int *)&fl->line[(y * fl->size) + (x * (fl->bpp / 8))] = color;
 }
 
-int			main(int ac, char *av[])
+int			mlxsync(void *mlx, void *win, void *img)
 {
-	(void)ac;
-	(void)av;
-	if (lx_ctor())
-		return (EXIT_FAILURE);
-	lx_winpush(WIN_W, WIN_H, "fract'ol", (t_event *)fractol);
-	lx_dtor();
-	return (EXIT_SUCCESS);
+	mlx_clear_window(mlx, win);
+	mlx_string_put(mlx, win, IMG_X + 10, 20, 0x0FFFFFF, "Q : Julia");
+	mlx_string_put(mlx, win, IMG_X + 10, 40, 0x0FFFFFF, "W : Mandelbrot");
+	mlx_string_put(mlx, win, IMG_X + 10, 60, 0x0FFFFFF, "E : Burningship");
+	mlx_string_put(mlx, win, IMG_X + 10, 80, 0x0FFFFFF, "R : Tricorn");
+	mlx_string_put(mlx, win, IMG_X + 10, 100, 0x0FFFFFF, "T : Fish");
+	mlx_string_put(mlx, win, IMG_X + 10, 120, 0x0FFFFFF, "+ / - : Zoom");
+	mlx_string_put(mlx, win, IMG_X + 10, 180, 0x0FFFFFF, "UP : Move up");
+	mlx_string_put(mlx, win, IMG_X + 10, 200, 0x0FFFFFF, "Down : Move down");
+	mlx_string_put(mlx, win, IMG_X + 10, 140, 0x0FFFFFF, "Left : Move Left");
+	mlx_string_put(mlx, win, IMG_X + 10, 160, 0x0FFFFFF, "Right: Move Right");
+	mlx_string_put(mlx, win, IMG_X + 10, 220, 0x0FFFFFF, "I : Increase precis");
+	mlx_string_put(mlx, win, IMG_X + 10, 240, 0x0FFFFFF, "D : Decrease precis");
+	mlx_string_put(mlx, win, IMG_X + 10, 260, 0x0FFFFFF, "C : Change color");
+	return (mlx_put_image_to_window(mlx, win, img, 0, 0));
+}
+
+int			main(int argc, char **argv)
+{
+	t_fl	fl;
+
+	if (argc != 2)
+		return (ft_retf(EXIT_FAILURE, "%e\n", EINVAL));
+	ft_memset(&fl, 0, sizeof(t_fl));
+	fl.kind = ft_strhash(argv[1]);
+	if (fl.kind != JULIA && fl.kind != MANDELBROT && fl.kind != FISH &&
+		fl.kind != BURNINGSHIP && fl.kind != TRICORN)
+		return (ft_retf(EXIT_FAILURE, "unknown fractal\n", argv[1]));
+	if (!(fl.mlx = mlx_init()) ||
+		!(fl.win = mlx_new_window(fl.mlx, WIN_X, WIN_Y, argv[0])) ||
+		!(fl.img = mlx_new_image(fl.mlx, IMG_X, IMG_Y)) ||
+		!(fl.line = mlx_get_data_addr(fl.img, &fl.bpp, &fl.size,
+			&fl.endian)))
+		return (ft_retf(EXIT_FAILURE, "error while init mlx\n"));
+	mlx_hook(fl.win, KEYRELEASE, KEYRELEASEMASK, onkeyrelease, &fl);
+	mlx_hook(fl.win, KEYPRESS, KEYPRESSMASK, onkeypress, &fl);
+	mlx_hook(fl.win, MOTIONNOTIFY, POINTERMOTIONMASK, onmotion, &fl);
+	mlx_mouse_hook(fl.win, onclick, &fl);
+	mlx_expose_hook(fl.win, onexpose, &fl);
+	mlx_loop(fl.mlx);
+	return (0);
 }

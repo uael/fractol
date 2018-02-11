@@ -4,7 +4,6 @@ cmake_policy(SET CMP0045 OLD)
 
 project(fractol C)
 add_subdirectory(vendor/libft)
-add_subdirectory(vendor/liblx)
 
 set(BUILD_SHARED_LIBS OFF)
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
@@ -27,7 +26,7 @@ add_executable(fractol ${fractol_HDR} ${fractol_HDRS} ${fractol_SRCS})
 set_property(TARGET fractol PROPERTY C_STANDARD 90)
 target_include_directories(fractol PUBLIC ${fractol_INC_DIR})
 target_link_libraries(fractol PUBLIC mlx pthread
-  "-framework AppKit" "-framework OpenGL" debug ft debug lx)
+  "-framework AppKit" "-framework OpenGL" debug ft)
 
 target_compile_definitions(fractol
   PRIVATE $<$<CONFIG:Debug>:DEBUG>$<$<CONFIG:Release>:NDEBUG>)
