@@ -12,6 +12,8 @@
 
 #include "fractol.h"
 
+#define USAGE "usage: fractol [julia|mandelbrot|burningship|tricorn|fish]\n"
+
 static void	*fractal(uint32_t kind)
 {
 	if (kind == JULIA)
@@ -78,12 +80,12 @@ int			main(int argc, char **argv)
 	t_fl	fl;
 
 	if (argc != 2)
-		return (ft_retf(EXIT_FAILURE, "%e\n", EINVAL));
+		return (ft_retf(EXIT_FAILURE, "%e\n"USAGE, EINVAL));
 	ft_memset(&fl, 0, sizeof(t_fl));
 	fl.kind = ft_strhash(argv[1]);
 	if (fl.kind != JULIA && fl.kind != MANDELBROT && fl.kind != FISH &&
 		fl.kind != BURNINGSHIP && fl.kind != TRICORN)
-		return (ft_retf(EXIT_FAILURE, "unknown fractal\n", argv[1]));
+		return (ft_retf(EXIT_FAILURE, "unknown fractal\n"USAGE, argv[1]));
 	if (!(fl.mlx = mlx_init()) ||
 		!(fl.win = mlx_new_window(fl.mlx, WIN_X, WIN_Y, argv[0])) ||
 		!(fl.img = mlx_new_image(fl.mlx, IMG_X, IMG_Y)) ||
